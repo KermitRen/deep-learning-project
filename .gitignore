@@ -1,3 +1,4 @@
 .vscode/
 temp.*
 data/
+__pycache__/
