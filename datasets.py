@@ -15,8 +15,10 @@ class AnimalImageDataset(Dataset):
         totalImages = 0
         for _, _, files in os.walk(img_dir):
 
-            for _ in files:
-                totalImages += 1
+            for name in files:
+                # Mac has DS_Store hidden cache file
+                if "animal" in name:
+                   totalImages += 1
         
         self.noOfImages = totalImages
 
