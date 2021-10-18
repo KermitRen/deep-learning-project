@@ -3,7 +3,7 @@ from torch import optim
 from torch.utils import data
 import visualizing as Vis
 import datasets as Data
-from models import AutoEncoder, AutoEncoder2, AutoEncoder3, AutoEncoder4, AutoEncoder5
+from models import AutoEncoder, DeepDream
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
 import utility as U
@@ -20,34 +20,56 @@ loader_train = DataLoader(dataset = animal_dataset_train, batch_size = 64, shuff
 loader_val = DataLoader(dataset = animal_dataset_val, batch_size = 64, shuffle = False)
 
 #Setup Model
-model = AutoEncoder3()
+model = AutoEncoder()
 model.to(dev)
 opt = optim.SGD(model.parameters(), lr = 0.01, momentum=0.9)
 
-#U.load_model_state(model, opt, 'trained_models/autoencoder6.pt')
+U.load_model_state(model, opt, 'trained_models/autoencoder2.pt')
+for param in model.parameters():
+    param.requires_grad = False
+# history = U.fit_AutoEncoder(loader_train, model, F.mse_loss, opt, 5, loader_val)
+# U.save_model_state(model, opt, 'trained_models/autoencoder2.pt')
+# Vis.displayHistory(history)
 
-history = U.fit_model(loader_train, model, F.mse_loss, opt, 5, loader_val)
-U.save_model_state(model, opt, 'trained_models/autoencoder9.pt')
-Vis.displayHistory(history)
+#Setup DeepDream Model
+starting_image = Data.getCat(image_size = img_size)
+ending_image = Data.getFox(image_size = img_size)
+DDModel = DeepDream(starting_image, ending_image, model)
 
-catImage = Data.getRandom(image_size = img_size)
-foxImage = Data.getRandom(image_size = img_size)
+ddopt = optim.SGD(DDModel.parameters(), lr = 1, momentum=0.9)
+#print("DeepDream Weights", DDModel.getWeights())
+#weights = DDModel.getWeights()
+#weights.requires_grad = False
+#Vis.displayImages(weights, 1)
+#weights.requires_grad = True
+U.fit_DeepDream(DDModel, F.mse_loss, ddopt, 3000) #No batch, more epochs
+weights = DDModel.getWeights()
+weights.requires_grad = False
+Vis.displayImages(weights, 1)
 
-catEncoding = model.encode(catImage)
-foxEncoding = model.encode(foxImage)
-catDecoding = model.decode(catEncoding)
-foxDecoding = model.decode(foxEncoding)
 
-hybridEncoding1 = torch.lerp(catEncoding, foxEncoding, 0.25)
-hybridEncoding2 = torch.lerp(catEncoding, foxEncoding, 0.5)
-hybridEncoding3 = torch.lerp(catEncoding, foxEncoding, 0.75)
+#history = U.fit_model(loader_train, model, F.mse_loss, opt, 5, loader_val)
+#U.save_model_state(model, opt, 'trained_models/deepdream.pt')
+#Vis.displayHistory(history)
 
-hybrid1 = model.decode(hybridEncoding1)
-hybrid2 = model.decode(hybridEncoding2)
-hybrid3 = model.decode(hybridEncoding3)
+# catImage = Data.getRandom(image_size = img_size)
+# foxImage = Data.getRandom(image_size = img_size)
 
-merging = torch.cat((catDecoding, hybrid1, hybrid2, hybrid3, foxDecoding),0)
-Vis.displayImages(merging, 1)
+# catEncoding = model.encode(catImage)
+# foxEncoding = model.encode(foxImage)
+# catDecoding = model.decode(catEncoding)
+# foxDecoding = model.decode(foxEncoding)
+
+# hybridEncoding1 = torch.lerp(catEncoding, foxEncoding, 0.25)
+# hybridEncoding2 = torch.lerp(catEncoding, foxEncoding, 0.5)
+# hybridEncoding3 = torch.lerp(catEncoding, foxEncoding, 0.75)
+
+# hybrid1 = model.decode(hybridEncoding1)
+# hybrid2 = model.decode(hybridEncoding2)
+# hybrid3 = model.decode(hybridEncoding3)
+
+# merging = torch.cat((catDecoding, hybrid1, hybrid2, hybrid3, foxDecoding),0)
+# Vis.displayImages(merging, 1)
 
 
 #To do:

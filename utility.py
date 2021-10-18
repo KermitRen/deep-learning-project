@@ -1,6 +1,6 @@
 import torch
 
-def fit_model(data_loader, model, loss_func, optimizer, epochs, val_loader):
+def fit_AutoEncoder(data_loader, model, loss_func, optimizer, epochs, val_loader):
 
     history = []
     display_batch = next(iter(val_loader))[0:5]
@@ -28,9 +28,20 @@ def fit_model(data_loader, model, loss_func, optimizer, epochs, val_loader):
     
     return history
 
+def fit_DeepDream(model, loss_func, optimizer, epochs):
 
+    ending_encoding = model.getEndingEncoding()
+    for epoch in range(epochs):
 
+        #Training Parameters
+        model.train()
+        loss = loss_func(model(), ending_encoding)
+        loss.backward(retain_graph=True)
+        optimizer.step()
+        optimizer.zero_grad()
 
+        #Evaluating
+        print("Completed epoch " + str(epoch + 1) + " out of " + str(epochs))
 
 def save_model_state(model, opt, path):
     torch.save({
