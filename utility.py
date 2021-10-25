@@ -31,6 +31,8 @@ def fit_AutoEncoder(data_loader, model, loss_func, optimizer, epochs, val_loader
 def fit_DeepDream(model, loss_func, optimizer, epochs):
 
     ending_encoding = model.getEndingEncoding()
+    history = []
+    history.append(model.getWeights().clone().detach())
     for epoch in range(epochs):
 
         #Training Parameters
@@ -41,7 +43,11 @@ def fit_DeepDream(model, loss_func, optimizer, epochs):
         optimizer.zero_grad()
 
         #Evaluating
-        print("Completed epoch " + str(epoch + 1) + " out of " + str(epochs))
+        if(epoch%1000 == 0):
+            history.append(model.getWeights().clone().detach())
+            print("Completed epoch " + str(epoch + 1) + " out of " + str(epochs) + " with loss " + str(loss))
+    
+    return history
 
 def save_model_state(model, opt, path):
     torch.save({

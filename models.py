@@ -1,6 +1,8 @@
+from matplotlib.pyplot import sca
 from torch import nn
 import torch
 import torch.nn.functional as F
+import torchvision.models as models
 
 #Original AutoEncoder3
 class AutoEncoder(nn.Module):
@@ -40,15 +42,87 @@ class AutoEncoder(nn.Module):
         layer5 = torch.sigmoid(self.bn5(self.conv5(layer4)))
         return layer5
 
+class MobileAutoEncoder(nn.Module):
+    def __init__(self, dev):
+        super().__init__()
+        self.model = models.mobilenet.mobilenet_v2(pretrained=True)
+        self.model.classifier = nn.Sequential(
+                                nn.Conv2d(1280, 640, kernel_size=3, stride=1, padding="same"),
+                                nn.BatchNorm2d(640),
+                                nn.ReLU(),
+                                nn.Upsample(scale_factor=2, mode="nearest"),
+                                nn.Conv2d(640, 320, kernel_size=3, stride=1, padding="same"),
+                                nn.BatchNorm2d(320),
+                                nn.ReLU(),
+                                nn.Upsample(scale_factor=2, mode="nearest"),
+                                nn.Conv2d(320, 160, kernel_size=3, stride=1, padding="same"),
+                                nn.BatchNorm2d(160),
+                                nn.ReLU(),
+                                nn.Upsample(scale_factor=2, mode="nearest"),
+                                nn.Conv2d(160, 80, kernel_size=3, stride=1, padding="same"),
+                                nn.BatchNorm2d(80),
+                                nn.ReLU(),
+                                nn.Upsample(scale_factor=2, mode="nearest"),
+                                nn.Conv2d(80, 40, kernel_size=3, stride=1, padding="same"),
+                                nn.BatchNorm2d(40),
+                                nn.ReLU(),
+                                nn.Upsample(scale_factor=2, mode="nearest"),
+                                nn.Conv2d(40, 3, kernel_size=3, stride=1, padding="same"),
+                                nn.BatchNorm2d(3),
+                                nn.Sigmoid()
+                                )
+        self.model.to(dev)
+        self.model.eval()
+        for param in self.model.features.parameters():
+            param.requires_grad = False
+
+    def encode(self, x):
+        return self.model.features(x)
+
+    def decode(self, x):
+        return self.model.classifier(x)
+
+    def forward(self, x):
+        return self.model.classifier(self.model.features(x))
+
+class AlexNet(nn.Module):
+    def __init__(self, dev):
+        super().__init__()
+        self.model = models.alexnet(pretrained=True)
+        self.model.to(dev)
+        for param in self.model.parameters():
+            param.requires_grad = False
+
+    def encode(self, x):
+        return self.model.features(x)
+
+    def forward(self, x):
+        return self.model(x)
+
+class MobileNet(nn.Module):
+    def __init__(self, dev):
+        super().__init__()
+        self.model = models.mobilenet.mobilenet_v2(pretrained=True)
+        self.model.to(dev)
+        self.model.eval()
+        for param in self.model.parameters():
+            param.requires_grad = False
+
+    def encode(self, x):
+        return self.model.features(x)
+
+    def forward(self, x):
+        return self.model(x)
+
 class DeepDream(nn.Module):
     def __init__(self, starting_image, ending_image, model):
         super().__init__()
         self.W = nn.Parameter(starting_image)
         self.model = model
         self.ending_encoding = self.model.encode(ending_image)
+        print(self.ending_encoding.size())
 
     def forward(self):
-
         return self.model.encode(self.W)
 
     def getWeights(self):

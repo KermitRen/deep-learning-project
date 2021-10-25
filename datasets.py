@@ -79,3 +79,9 @@ def getLion(image_size = None):
 
 def getRandom(image_size = None):
     return getSpecificImage(random.randint(1, 1500), image_size)
+
+def getNoise(image_size = None):
+    noise = torch.rand((1, 3) + image_size)
+    dev = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+    noise = noise.to(dev)
+    return noise

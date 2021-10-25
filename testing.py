@@ -1,12 +1,15 @@
+from matplotlib.pyplot import hist
 import torch
 from torch import optim
 from torch.utils import data
 import visualizing as Vis
 import datasets as Data
-from models import AutoEncoder, DeepDream
-from torch.utils.data import DataLoader
+from models import DeepDream, MobileNet, MobileAutoEncoder
+from torch.utils.data import DataLoader, dataset
 import torch.nn.functional as F
 import utility as U
+import torchvision.models as models
+import torch.utils.model_zoo
 
 #Setup GPU
 dev = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
@@ -14,38 +17,46 @@ dev = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 img_size = (256, 256)
 
 #Load Data
-animal_dataset_train = Data.AnimalImageDataset(img_dir = 'data/train', image_size = img_size, data_size=1000)
+animal_dataset_train = Data.AnimalImageDataset(img_dir = 'data/train', image_size = img_size)
 animal_dataset_val = Data.AnimalImageDataset(img_dir = 'data/val', image_size = img_size)
 loader_train = DataLoader(dataset = animal_dataset_train, batch_size = 64, shuffle = True)
 loader_val = DataLoader(dataset = animal_dataset_val, batch_size = 64, shuffle = False)
 
 #Setup Model
-model = AutoEncoder()
+model = MobileAutoEncoder(dev)
 model.to(dev)
-opt = optim.SGD(model.parameters(), lr = 0.01, momentum=0.9)
+opt = optim.SGD(model.parameters(), lr = 0.1, momentum=0.9)
 
-U.load_model_state(model, opt, 'trained_models/autoencoder2.pt')
-for param in model.parameters():
-    param.requires_grad = False
-# history = U.fit_AutoEncoder(loader_train, model, F.mse_loss, opt, 5, loader_val)
-# U.save_model_state(model, opt, 'trained_models/autoencoder2.pt')
-# Vis.displayHistory(history)
+print(model.encode(next(iter(loader_train))).size())
+#U.load_model_state(model, opt, 'trained_models/autoencoder.pt')
+#for param in model.parameters():
+#    param.requires_grad = False
+history = U.fit_AutoEncoder(loader_train, model, F.mse_loss, opt, 3, loader_val)
+U.save_model_state(model, opt, 'trained_models/Mautoencoder.pt')
+Vis.displayHistory(history)
+
+#Setup Model
+#model2 = MobileNet(dev)
+#model2.to(dev)
+#print(model2.encode(Data.getCat(image_size=img_size)))
 
 #Setup DeepDream Model
 starting_image = Data.getCat(image_size = img_size)
-ending_image = Data.getFox(image_size = img_size)
+ending_image = Data.getDog(image_size = img_size)
 DDModel = DeepDream(starting_image, ending_image, model)
 
-ddopt = optim.SGD(DDModel.parameters(), lr = 1, momentum=0.9)
+ddopt = optim.SGD(DDModel.parameters(), lr = 0.1, momentum=0.9)
 #print("DeepDream Weights", DDModel.getWeights())
 #weights = DDModel.getWeights()
 #weights.requires_grad = False
 #Vis.displayImages(weights, 1)
 #weights.requires_grad = True
-U.fit_DeepDream(DDModel, F.mse_loss, ddopt, 3000) #No batch, more epochs
-weights = DDModel.getWeights()
-weights.requires_grad = False
-Vis.displayImages(weights, 1)
+history = U.fit_DeepDream(DDModel, F.mse_loss, ddopt, 19000) #No batch, more epochs
+Vis.displayHistory(history)
+newImages = []
+for i in range(len(history)):
+    newImages.append(model(history[i]))
+Vis.displayHistory(newImages)
 
 
 #history = U.fit_model(loader_train, model, F.mse_loss, opt, 5, loader_val)
