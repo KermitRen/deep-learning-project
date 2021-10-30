@@ -52,7 +52,6 @@ def fit_AutoEncoder(data_loader, model, loss_func, optimizer, epochs, val_loader
 def fit_DeepDream(model, loss_func, optimizer, epochs, history_size = 5):
 
     ending_encoding = model.getEndingEncoding()
-    history = model.getWeights()
     loss_history = []
     weight_history = []
 
@@ -61,7 +60,7 @@ def fit_DeepDream(model, loss_func, optimizer, epochs, history_size = 5):
         #Training Parameters
         model.train()
         loss = loss_func(model(), ending_encoding)
-        loss_history.append(loss)
+        loss_history.append(loss.item())
         weight_history.append(model.getWeights())
         loss.backward(retain_graph=True)
         optimizer.step()
@@ -69,15 +68,27 @@ def fit_DeepDream(model, loss_func, optimizer, epochs, history_size = 5):
 
         #Evaluating
         if(epoch%10 == 0):
-            history = torch.cat((history,) + (model.getWeights(),),0)
             print("Completed epoch " + str(epoch + 1) + " out of " + str(epochs) + " with loss " + str(loss) + "\n")
     
-    #history = createHistory(loss_history, weight_history, history_size)
+    history = createHistory(loss_history, weight_history, history_size)
     return history
 
 def createHistory(loss_history, weight_history, history_size):
     #Needs to be done
-    return
+    loss_diff = loss_history[0]-loss_history[len(loss_history)-1]
+    loss_interval = loss_diff/(history_size-1)
+    history = weight_history[0]
+    for i in range(history_size-1):
+        target_loss = loss_history[0]-((i+1)*loss_interval)
+        smallest_diff = float('inf')
+        best_epoch = 0
+        for j in range(len(loss_history)):
+            targetloss_diff = abs(loss_history[j]-target_loss)
+            if targetloss_diff < smallest_diff:
+                smallest_diff = targetloss_diff
+                best_epoch = j
+        history = torch.cat(((history, )+(weight_history[best_epoch],)),0)
+    return history
 
 def graphLossHistory(train_hist, val_hist):
     plt.figure(figsize=(20,6))
@@ -105,16 +116,16 @@ def interpolationMerge(img1, img2, model, size = 5):
     encoding2 = model.encode(img2)
     interpolatedEncodings = getInterpolations(encoding1, encoding2, size)
     interpolatedDecodings = model.decode(interpolatedEncodings)
-    Vis.displayImages(interpolatedDecodings)
+    #Vis.displayImages(interpolatedDecodings)
+    return interpolatedDecodings
 
 def save_model_state(model, opt, path):
-    model.cpu()
     torch.save({
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': opt.state_dict(),
             }, path)
 
 def load_model_state(model, opt, path):
-    data = torch.load(path)
+    data = torch.load(path, map_location=torch.device('cpu'))
     model.load_state_dict(data['model_state_dict'])
     opt.load_state_dict(data['optimizer_state_dict'])
