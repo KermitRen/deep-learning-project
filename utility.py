@@ -108,6 +108,7 @@ def interpolationMerge(img1, img2, model, size = 5):
     Vis.displayImages(interpolatedDecodings)
 
 def save_model_state(model, opt, path):
+    model.cpu()
     torch.save({
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': opt.state_dict(),

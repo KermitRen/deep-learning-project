@@ -25,9 +25,9 @@ model = M.AutoEncoder()
 model.to(dev)
 opt = optim.Adam(model.parameters(), lr = learning_rate)
 
-#U.load_model_state(model, opt, 'trained_models/AE.pt')
+U.load_model_state(model, opt, 'trained_models/AE.pt')
 
 #Train Model
 history = U.fit_AutoEncoder(loader_train, model, F.mse_loss, opt, epochs, loader_val, graph_loss = True)
-#U.save_model_state(model, opt, 'trained_models/AE2.pt')
+U.save_model_state(model, opt, 'trained_models/AE.pt')
 Vis.displayImages(history, columMax=5)
