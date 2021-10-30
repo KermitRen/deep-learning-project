@@ -1,10 +1,9 @@
-from matplotlib.pyplot import sca
 from torch import nn
 import torch
+from torchvision import transforms as T
 import torch.nn.functional as F
 import torchvision.models as models
 
-#Original AutoEncoder3
 class AutoEncoder(nn.Module):
     def __init__(self):
         super().__init__()
@@ -25,6 +24,7 @@ class AutoEncoder(nn.Module):
     
     def encode(self, x):
         #Encoder
+        x = T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])(x)
         layer1 = F.relu(self.bn1(self.conv1(x)))
         layer1 = nn.MaxPool2d(2)(layer1)
         layer2 = F.relu(self.bn2(self.conv2(layer1)))
@@ -41,6 +41,26 @@ class AutoEncoder(nn.Module):
 
         layer5 = torch.sigmoid(self.bn5(self.conv5(layer4)))
         return layer5
+
+class DeepDream(nn.Module):
+    def __init__(self, starting_image, ending_image, model):
+        super().__init__()
+        self.W = nn.Parameter(starting_image)
+        self.model = model
+        for param in self.model.parameters():
+            param.requires_grad = False
+        self.ending_encoding = self.model.encode(ending_image)
+
+    def forward(self):
+        return self.model.encode(self.W)
+
+    def getWeights(self):
+        return self.W.clone().detach()
+
+    def getEndingEncoding(self):
+        return self.ending_encoding
+
+##############################################################################################################
 
 class MobileAutoEncoder(nn.Module):
     def __init__(self, dev):
@@ -113,20 +133,3 @@ class MobileNet(nn.Module):
 
     def forward(self, x):
         return self.model(x)
-
-class DeepDream(nn.Module):
-    def __init__(self, starting_image, ending_image, model):
-        super().__init__()
-        self.W = nn.Parameter(starting_image)
-        self.model = model
-        self.ending_encoding = self.model.encode(ending_image)
-        print(self.ending_encoding.size())
-
-    def forward(self):
-        return self.model.encode(self.W)
-
-    def getWeights(self):
-        return self.W
-
-    def getEndingEncoding(self):
-        return self.ending_encoding

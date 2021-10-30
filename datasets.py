@@ -7,10 +7,12 @@ from torch.utils.data import Dataset
 
 
 class AnimalImageDataset(Dataset):
-    def __init__(self, img_dir, image_size = None, data_size = None):
+    def __init__(self, img_dir, image_size = None, data_size = None, noise = 0):
         self.img_dir = img_dir
         self.image_size = image_size
         self.data_size = data_size
+        self.noise = noise
+        self.dev = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
         totalImages = 0
         for _, _, files in os.walk(img_dir):
@@ -31,14 +33,23 @@ class AnimalImageDataset(Dataset):
     def __getitem__(self, index):
         img_index = "(" + str(index + 1) + ")"
         img_path = os.path.join(self.img_dir, "animal " + img_index + ".jpg")
-        image = read_image(img_path)
+        target_image = read_image(img_path)
 
+        #Preprocessing
         if self.image_size:
-            image = T.Resize(self.image_size)(image)
-        
-        image = preprocessImage(image)
+            target_image = T.Resize(self.image_size)(target_image)
+        target_image = (lambda x: x/255)(target_image)
 
-        return image
+        #Adjusting Input image
+        if self.noise:
+            image = target_image + (torch.rand(target_image.size()) * (self.noise)) - (self.noise/2)
+        else:
+            image = target_image
+        
+        image = image.to(self.dev)
+        target_image = target_image.to(self.dev)
+
+        return image, target_image
 
 def preprocessImage(image):
     dev = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
