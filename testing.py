@@ -10,19 +10,19 @@ import utility as U
 dev = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 img_size = (256, 256)
 epochs = 200
-learning_rate = 0.1
+learning_rate = 0.05
 size = 8
 
 #Load Data
-starting_image = Data.getSpecificImage(563, image_size = img_size)
-ending_image = Data.getSpecificImage(1244, image_size = img_size)
+starting_image = Data.getSpecificImage(38, image_size = img_size)
+ending_image = Data.getSpecificImage(563, image_size = img_size)
 #563,795
 
 #Setup Base Model
 model = M.AutoEncoder()
 model.to(dev)
 opt = optim.Adam(model.parameters(), lr = learning_rate)
-#U.load_model_state(model, opt, 'trained_models/VeryDenoisingAE.pt')
+U.load_model_state(model, opt, 'trained_models/VeryDenoisingAE.pt')
 
 #Setup DeepDream Model
 DDModel = M.DeepDream(starting_image, ending_image, model)
