@@ -49,6 +49,45 @@ def fit_AutoEncoder(data_loader, model, loss_func, optimizer, epochs, val_loader
 
     return history
 
+def fit_Classifier(data_loader, model, loss_func, optimizer, epochs, val_loader, graph_loss = False):
+
+    #Loss Variables
+    train_losses = []
+    val_losses = [NaN]
+
+    for epoch in range(epochs):
+
+        #Training Parameters
+        model.train()
+        train_loss = 0
+        for img, label in data_loader:
+            loss = loss_func(model(img), label) 
+            train_loss += loss
+            loss.backward()
+            optimizer.step()
+            optimizer.zero_grad()
+
+        #Evaluating
+        model.eval()
+        with torch.no_grad():
+            val_loss = 0
+            for img, label in val_loader:
+                val_loss += loss_func(model(img), label)
+
+        #Print Progress
+        avgTrainLoss = (train_loss.item()/(len(data_loader.dataset)))*100
+        avgValLoss = (val_loss.item()/(len(val_loader.dataset)))*100
+        train_losses.append(avgTrainLoss)
+        val_losses.append(avgValLoss)
+        print("Completed epoch " + str(epoch + 1) + " out of " + str(epochs))
+        print("The new model has training loss: " + "{:.6f}".format(avgTrainLoss))
+        print("The new model has validation loss: " + "{:.6f}".format(avgValLoss) + "\n")
+    
+    #Show loss graph
+    if(graph_loss):
+        graphLossHistory(train_losses, val_losses)
+
+
 def fit_DeepDream(model, loss_func, optimizer, epochs, history_size = 5):
 
     ending_encoding = model.getEndingEncoding()
@@ -129,3 +168,15 @@ def load_model_state(model, opt, path):
     data = torch.load(path, map_location=torch.device('cpu'))
     model.load_state_dict(data['model_state_dict'])
     opt.load_state_dict(data['optimizer_state_dict'])
+
+def labelMapping(animal):
+    return {
+        'cat': 0,
+        'dog': 1,
+        'fox': 2,
+        'lion': 3,
+        'wolf': 4,
+        'tiger': 5,
+        'leopard': 6,
+        'cheetah': 7,
+    }[animal]

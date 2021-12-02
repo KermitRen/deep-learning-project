@@ -62,6 +62,22 @@ class DeepDream(nn.Module):
 
 ##############################################################################################################
 
+class VGGClassifier(nn.Module):
+    def __init__(self, dev):
+        super().__init__()
+        self.model = models.vgg16(pretrained=True)
+
+        for param in self.model.parameters():
+            param.requires_grad = False
+
+        self.model.to(dev)
+    
+    def encode(self, x):
+        return self.model.features(x)
+
+    def forward(self, x):
+        return self.model(x)
+
 class MobileAutoEncoder(nn.Module):
     def __init__(self, dev):
         super().__init__()

@@ -4,6 +4,9 @@ import random
 from torchvision.io import read_image
 from torchvision import transforms as T
 from torch.utils.data import Dataset
+import torch.nn.functional as F
+import pandas as pd
+import utility as U
 
 
 class AnimalImageDataset(Dataset):
@@ -50,6 +53,44 @@ class AnimalImageDataset(Dataset):
         target_image = target_image.to(self.dev)
 
         return image, target_image
+
+class AnimalImageLabelDataset(Dataset):
+    def __init__(self, img_dir, labels_file, image_size = None, data_size = None, noise = 0):
+        self.img_dir = img_dir
+        self.image_size = image_size
+        self.image_labels = pd.read_csv(labels_file)
+        self.data_size = data_size
+        self.noise = noise
+        self.dev = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        
+        self.noOfImages = self.image_labels.shape[0]
+
+    def __len__(self):
+
+        if self.data_size and self.data_size <= self.noOfImages:
+            return self.data_size
+        return self.noOfImages
+
+    def __getitem__(self, index):
+        img_index = "(" + str(index + 1) + ")"
+        img_path = os.path.join(self.img_dir, "animal " + img_index + ".jpg")
+        image = read_image(img_path)
+        label = torch.tensor(U.labelMapping(self.image_labels.iloc[index, 1]))
+        #label = F.one_hot(label, num_classes=8)
+
+        #Preprocessing
+        if self.image_size:
+            image = T.Resize(self.image_size)(image)
+        image = (lambda x: x/255)(image)
+
+        #Adjusting Input image
+        if self.noise:
+            image = image + (torch.rand(image.size()) * (self.noise)) - (self.noise/2)
+        
+        image = image.to(self.dev)
+        label = label.to(self.dev)
+
+        return image, label
 
 def preprocessImage(image):
     dev = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
